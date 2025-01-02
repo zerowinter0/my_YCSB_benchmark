@@ -13,6 +13,7 @@
 
 #include <leveldb/options.h>
 #include <leveldb/write_batch.h>
+#include <leveldb/fields.h>
 
 namespace {
   const std::string PROP_NAME = "leveldb.dbname";
@@ -171,54 +172,34 @@ void LeveldbDB::GetOptions(const utils::Properties &props, leveldb::Options *opt
 }
 
 void LeveldbDB::SerializeRow(const std::vector<Field> &values, std::string *data) {
+  leveldb::FieldArray fields_array;
   for (const Field &field : values) {
-    uint32_t len = field.name.size();
-    data->append(reinterpret_cast<char *>(&len), sizeof(uint32_t));
-    data->append(field.name.data(), field.name.size());
-    len = field.value.size();
-    data->append(reinterpret_cast<char *>(&len), sizeof(uint32_t));
-    data->append(field.value.data(), field.value.size());
+    fields_array.push_back({field.name,field.value});
   }
+  *data=leveldb::SerializeValue(fields_array);
 }
 
 void LeveldbDB::DeserializeRowFilter(std::vector<Field> *values, const std::string &data,
                                      const std::vector<std::string> &fields) {
-  const char *p = data.data();
-  const char *lim = p + data.size();
 
+  leveldb::FieldArray fieldArray;
+  leveldb::DeserializeValue(data,&fieldArray);
   std::vector<std::string>::const_iterator filter_iter = fields.begin();
-  while (p != lim && filter_iter != fields.end()) {
-    assert(p < lim);
-    uint32_t len = *reinterpret_cast<const uint32_t *>(p);
-    p += sizeof(uint32_t);
-    std::string field(p, static_cast<const size_t>(len));
-    p += len;
-    len = *reinterpret_cast<const uint32_t *>(p);
-    p += sizeof(uint32_t);
-    std::string value(p, static_cast<const size_t>(len));
-    p += len;
-    if (*filter_iter == field) {
-      values->push_back({field, value});
+  for(const auto&field:fieldArray){
+    if (*filter_iter == field.second) {
+      values->push_back({std::string(field.first.data(),field.first.size()),std::string(field.second.data(),field.second.size())});
       filter_iter++;
+      if(filter_iter==fields.end())break;
     }
   }
   assert(values->size() == fields.size());
 }
 
 void LeveldbDB::DeserializeRow(std::vector<Field> *values, const std::string &data) {
-  const char *p = data.data();
-  const char *lim = p + data.size();
-  while (p != lim) {
-    assert(p < lim);
-    uint32_t len = *reinterpret_cast<const uint32_t *>(p);
-    p += sizeof(uint32_t);
-    std::string field(p, static_cast<const size_t>(len));
-    p += len;
-    len = *reinterpret_cast<const uint32_t *>(p);
-    p += sizeof(uint32_t);
-    std::string value(p, static_cast<const size_t>(len));
-    p += len;
-    values->push_back({field, value});
+  leveldb::FieldArray fieldArray;
+  leveldb::DeserializeValue(data,&fieldArray);
+  for(const auto&field:fieldArray){
+    values->push_back({std::string(field.first.data(),field.first.size()),std::string(field.second.data(),field.second.size())});
   }
   assert(values->size() == fieldcount_);
 }
@@ -269,8 +250,7 @@ DB::Status LeveldbDB::ReadSingleEntry(const std::string &table, const std::strin
 DB::Status LeveldbDB::ScanSingleEntry(const std::string &table, const std::string &key, int len,
                                       const std::vector<std::string> *fields,
                                       std::vector<std::vector<Field>> &result) {
-  leveldb::Iterator *db_iter = db_->NewIterator(leveldb::ReadOptions());
-  db_iter->Seek(key);
+  leveldb::Iterator *db_iter = db_->NewUnorderedIterator(leveldb::ReadOptions(),key,leveldb::Slice());
   for (int i = 0; db_iter->Valid() && i < len; i++) {
     std::string data = db_iter->value().ToString();
     result.push_back(std::vector<Field>());
@@ -386,8 +366,7 @@ DB::Status LeveldbDB::ReadCompKeyRM(const std::string &table, const std::string 
 DB::Status LeveldbDB::ScanCompKeyRM(const std::string &table, const std::string &key, int len,
                                     const std::vector<std::string> *fields,
                                     std::vector<std::vector<Field>> &result) {
-  leveldb::Iterator *db_iter = db_->NewIterator(leveldb::ReadOptions());
-  db_iter->Seek(key);
+  leveldb::Iterator *db_iter = db_->NewUnorderedIterator(leveldb::ReadOptions(),key,leveldb::Slice());
   assert(db_iter->Valid() && KeyFromCompKey(db_iter->key().ToString()) == key);
   for (int i = 0; i < len && db_iter->Valid(); i++) {
     result.push_back(std::vector<Field>());
