@@ -36,6 +36,8 @@ class BasicDB : public DB {
 
   Status Delete(const std::string &table, const std::string &key);
 
+  Status GetKeysByFields(const std::string &table, const std::string &field_name, const std::string &field_value);
+
  private:
   static std::mutex mutex_;
 

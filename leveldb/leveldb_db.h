@@ -54,6 +54,10 @@ class LeveldbDB : public DB {
     return (this->*(method_delete_))(table, key);
   }
 
+  Status GetKeysByFields(const std::string &table, const std::string &field_name,const std::string &field_value){
+    return (this->*(method_get_keys_by_fields_))(table, field_name,field_value);
+  }
+
  private:
   enum LdbFormat {
     kSingleEntry,
@@ -81,6 +85,8 @@ class LeveldbDB : public DB {
   Status InsertSingleEntry(const std::string &table, const std::string &key,
                            std::vector<Field> &values);
   Status DeleteSingleEntry(const std::string &table, const std::string &key);
+  
+  Status GetKeysByFieldsEntry(const std::string &table, const std::string &field_name,const std::string &field_value);
 
   Status ReadCompKeyRM(const std::string &table, const std::string &key,
                        const std::vector<std::string> *fields, std::vector<Field> &result);
@@ -106,6 +112,7 @@ class LeveldbDB : public DB {
   Status (LeveldbDB::*method_insert_)(const std::string &, const std::string &,
                                       std::vector<Field> &);
   Status (LeveldbDB::*method_delete_)(const std::string &, const std::string &);
+  Status (LeveldbDB::*method_get_keys_by_fields_)(const std::string &, const std::string &, const std::string &);
 
   int fieldcount_;
   std::string field_prefix_;

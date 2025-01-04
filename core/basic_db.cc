@@ -89,6 +89,12 @@ DB::Status BasicDB::Delete(const std::string &table, const std::string &key) {
   return kOK;
 }
 
+DB::Status BasicDB::GetKeysByFields(const std::string &table, const std::string &field_name, const std::string &field_value){
+  std::lock_guard<std::mutex> lock(mutex_);
+  *out_ << "GETKEYSBYFIELD " << table << ' ' << field_name<<' '<<field_value << std::endl;
+  return kOK;
+}
+
 DB *NewBasicDB() {
   return new BasicDB;
 }

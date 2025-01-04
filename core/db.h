@@ -100,6 +100,15 @@ class DB {
   ///
   virtual Status Delete(const std::string &table, const std::string &key) = 0;
 
+  ///
+  /// Deletes a record from the database.
+  ///
+  /// @param table The name of the table.
+  /// @param key The key of the record to delete.
+  /// @return Zero on success, a non-zero error code on error.
+  ///
+  virtual Status GetKeysByFields(const std::string &table, const std::string &field_name,const std::string &field_value) = 0;
+
   virtual ~DB() { }
 
   void SetProps(utils::Properties *props) {

@@ -87,6 +87,17 @@ class DBWrapper : public DB {
     }
     return s;
   }
+  Status GetKeysByFields(const std::string &table, const std::string &field_name, const std::string &field_value) {
+    timer_.Start();
+    Status s = db_->GetKeysByFields(table, field_name,field_value);
+    uint64_t elapsed = timer_.End();
+    if (s == kOK) {
+      measurements_->Report(GETKEYSBYFIELD, elapsed);
+    } else {
+      measurements_->Report(GETKEYSBYFIELD_FAILED, elapsed);
+    }
+    return s;
+  }
  private:
   DB *db_;
   Measurements *measurements_;

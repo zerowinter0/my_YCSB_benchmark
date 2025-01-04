@@ -30,12 +30,14 @@ const char *ycsbc::kOperationString[ycsbc::MAXOPTYPE] = {
   "SCAN",
   "READMODIFYWRITE",
   "DELETE",
+  "GETKEYSBYFIELD",
   "INSERT-FAILED",
   "READ-FAILED",
   "UPDATE-FAILED",
   "SCAN-FAILED",
   "READMODIFYWRITE-FAILED",
-  "DELETE-FAILED"
+  "DELETE-FAILED",
+  "GETKEYSBYFIELD-FAILED"
 };
 
 const string CoreWorkload::TABLENAME_PROPERTY = "table";
@@ -70,6 +72,9 @@ const string CoreWorkload::SCAN_PROPORTION_DEFAULT = "0.0";
 
 const string CoreWorkload::READMODIFYWRITE_PROPORTION_PROPERTY = "readmodifywriteproportion";
 const string CoreWorkload::READMODIFYWRITE_PROPORTION_DEFAULT = "0.0";
+
+const string CoreWorkload::GETKEYSBYFIELD_PROPORTION_PROPERTY = "getkeysbyfieldproportion";
+const string CoreWorkload::GETKEYSBYFIELD_PROPORTION_DEFAULT = "0.0";
 
 const string CoreWorkload::REQUEST_DISTRIBUTION_PROPERTY = "requestdistribution";
 const string CoreWorkload::REQUEST_DISTRIBUTION_DEFAULT = "uniform";
@@ -120,6 +125,9 @@ void CoreWorkload::Init(const utils::Properties &p) {
   double readmodifywrite_proportion = std::stod(p.GetProperty(
       READMODIFYWRITE_PROPORTION_PROPERTY, READMODIFYWRITE_PROPORTION_DEFAULT));
 
+  double getkeysbyfield_prportion = std::stod(p.GetProperty(
+      GETKEYSBYFIELD_PROPORTION_PROPERTY, GETKEYSBYFIELD_PROPORTION_DEFAULT));
+
   record_count_ = std::stoi(p.GetProperty(RECORD_COUNT_PROPERTY));
   std::string request_dist = p.GetProperty(REQUEST_DISTRIBUTION_PROPERTY,
                                            REQUEST_DISTRIBUTION_DEFAULT);
@@ -157,6 +165,9 @@ void CoreWorkload::Init(const utils::Properties &p) {
   }
   if (readmodifywrite_proportion > 0) {
     op_chooser_.AddValue(READMODIFYWRITE, readmodifywrite_proportion);
+  }
+  if (getkeysbyfield_prportion > 0){
+    op_chooser_.AddValue(GETKEYSBYFIELD,getkeysbyfield_prportion);
   }
 
   insert_key_sequence_ = new CounterGenerator(insert_start);
@@ -281,6 +292,9 @@ bool CoreWorkload::DoTransaction(DB &db) {
     case READMODIFYWRITE:
       status = TransactionReadModifyWrite(db);
       break;
+    case GETKEYSBYFIELD:
+      status = TransactionGetKeysByField(db);
+      break;
     default:
       throw utils::Exception("Operation request is not recognized!");
   }
@@ -320,6 +334,19 @@ DB::Status CoreWorkload::TransactionReadModifyWrite(DB &db) {
     BuildSingleValue(values);
   }
   return db.Update(table_name_, key, values);
+}
+
+DB::Status CoreWorkload::TransactionGetKeysByField(DB &db) {
+  uint64_t key_num = NextTransactionKeyNum();
+  const std::string key = BuildKeyName(key_num);
+  std::vector<DB::Field> result;
+  std::string field_name_=NextFieldName();
+  std::string field_value_;
+  uint64_t len = field_len_generator_->Next();
+  field_value_.reserve(len);
+  RandomByteGenerator byte_generator;
+  std::generate_n(std::back_inserter(field_value_), len, [&]() { return byte_generator.Next(); } );
+  return db.GetKeysByFields(table_name_,field_name_,field_value_);
 }
 
 DB::Status CoreWorkload::TransactionScan(DB &db) {

@@ -85,6 +85,7 @@ void LeveldbDB::Init() {
   } else {
     throw utils::Exception("unknown format");
   }
+  method_get_keys_by_fields_=&LeveldbDB::GetKeysByFieldsEntry;
   fieldcount_ = std::stoi(props.GetProperty(CoreWorkload::FIELD_COUNT_PROPERTY,
                                             CoreWorkload::FIELD_COUNT_DEFAULT));
   field_prefix_ = props.GetProperty(CoreWorkload::FIELD_NAME_PREFIX,
@@ -316,6 +317,16 @@ DB::Status LeveldbDB::DeleteSingleEntry(const std::string &table, const std::str
   leveldb::Status s = db_->Delete(wopt, key);
   if (!s.ok()) {
     throw utils::Exception(std::string("LevelDB Delete: ") + s.ToString());
+  }
+  return kOK;
+}
+
+DB::Status LeveldbDB::GetKeysByFieldsEntry(const std::string &table, const std::string &field_name,const std::string &field_value){
+  leveldb::ReadOptions ropt;
+  std::vector<std::string> keys;
+  leveldb::Status s=leveldb::Get_keys_by_field(db_,ropt,{field_name,field_value},&keys);
+  if (!s.ok()) {
+    throw utils::Exception(std::string("LevelDB GetKeysByFields: ") + s.ToString());
   }
   return kOK;
 }

@@ -29,12 +29,14 @@ enum Operation {
   SCAN,
   READMODIFYWRITE,
   DELETE,
+  GETKEYSBYFIELD,
   INSERT_FAILED,
   READ_FAILED,
   UPDATE_FAILED,
   SCAN_FAILED,
   READMODIFYWRITE_FAILED,
   DELETE_FAILED,
+  GETKEYSBYFIELD_FAILED,
   MAXOPTYPE
 };
 
@@ -111,6 +113,9 @@ class CoreWorkload {
   ///
   static const std::string READMODIFYWRITE_PROPORTION_PROPERTY;
   static const std::string READMODIFYWRITE_PROPORTION_DEFAULT;
+
+  static const std::string GETKEYSBYFIELD_PROPORTION_PROPERTY;
+  static const std::string GETKEYSBYFIELD_PROPORTION_DEFAULT;
 
   ///
   /// The name of the property for the the distribution of request keys.
@@ -210,6 +215,7 @@ class CoreWorkload {
   DB::Status TransactionScan(DB &db);
   DB::Status TransactionUpdate(DB &db);
   DB::Status TransactionInsert(DB &db);
+  DB::Status TransactionGetKeysByField(DB &db);
 
   std::string table_name_;
   int field_count_;
