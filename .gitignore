@@ -8,4 +8,4 @@ tags
 compile_commands.json
 .clangd/
 .cache/
-.ycsb-leveldb-data/
+ycsb-leveldb-data/
